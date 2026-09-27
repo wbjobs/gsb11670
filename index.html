@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大图批量解码性能对比实验室</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>大图批量解码性能对比实验室</h1>
+    <p class="subtitle">createImageBitmap vs Image(onload) vs img.decode() —— 无框架原生实现</p>
+  </header>
+
+  <section class="panel controls">
+    <div class="control-group">
+      <label>解码方案
+        <select id="strategy">
+          <option value="createImageBitmap">createImageBitmap（主线程）</option>
+          <option value="createImageBitmapWorker">createImageBitmap（Web Worker）</option>
+          <option value="imageElement">Image + onload</option>
+          <option value="imgDecode">img.decode()</option>
+          <option value="all">三种方案基准对比（依次跑）</option>
+        </select>
+      </label>
+      <label>图片数量
+        <input id="count" type="number" min="1" max="60" value="12" />
+      </label>
+      <label>图片尺寸
+        <select id="size">
+          <option value="3000x2000">3000 × 2000（中）</option>
+          <option value="6000x4000" selected>6000 × 4000（大）</option>
+          <option value="9000x6000">9000 × 6000（超大）</option>
+        </select>
+      </label>
+      <label>图片格式
+        <select id="format">
+          <option value="mixed" selected>混合（JPEG/PNG/WebP 轮换）</option>
+          <option value="image/jpeg">JPEG</option>
+          <option value="image/png">PNG</option>
+          <option value="image/webp">WebP</option>
+        </select>
+      </label>
+      <label>并发数
+        <input id="concurrency" type="number" min="1" max="8" value="3" />
+      </label>
+      <label class="checkbox">
+        <input id="progressive" type="checkbox" checked />
+        先低分辨率占位，再全分辨率
+      </label>
+      <label class="checkbox">
+        <input id="injectCorrupt" type="checkbox" checked />
+        注入损坏样本（验证降级）
+      </label>
+    </div>
+    <div class="control-group buttons">
+      <button id="btnLoad" class="primary">开始批量加载</button>
+      <button id="btnCancel" disabled>取消解码</button>
+      <button id="btnClear">清空（释放内存）</button>
+      <button id="btnReset">重置全部</button>
+      <label class="file-label">
+        或选择本地图片
+        <input id="fileInput" type="file" accept="image/*" multiple hidden />
+      </label>
+    </div>
+  </section>
+
+  <section class="panel stats">
+    <div class="stat"><span class="stat-label">FPS</span><span id="statFps" class="stat-value">--</span></div>
+    <div class="stat"><span class="stat-label">JS 堆内存</span><span id="statMem" class="stat-value">--</span></div>
+    <div class="stat"><span class="stat-label">长任务(>50ms)</span><span id="statLongtask" class="stat-value">0</span></div>
+    <div class="stat"><span class="stat-label">已完成</span><span id="statDone" class="stat-value">0 / 0</span></div>
+    <div class="stat"><span class="stat-label">失败/降级</span><span id="statFailed" class="stat-value">0 / 0</span></div>
+    <div class="stat"><span class="stat-label">总耗时</span><span id="statElapsed" class="stat-value">--</span></div>
+  </section>
+
+  <section class="panel">
+    <h2>性能对照（performance.measure 采样）</h2>
+    <table id="perfTable">
+      <thead>
+        <tr>
+          <th>方案</th><th>样本数</th><th>平均(ms)</th><th>最小(ms)</th><th>最大(ms)</th><th>P95(ms)</th><th>总耗时(ms)</th>
+        </tr>
+      </thead>
+      <tbody><tr><td colspan="7" class="empty">暂无数据，点击「开始批量加载」</td></tr></tbody>
+    </table>
+  </section>
+
+  <section id="grid" class="grid"></section>
+
+  <template id="cardTpl">
+    <div class="card">
+      <div class="thumb"><span class="placeholder-text">等待中</span></div>
+      <div class="meta">
+        <div class="name"></div>
+        <div class="info"></div>
+        <div class="status"><span class="badge">等待</span><span class="time"></span></div>
+      </div>
+    </div>
+  </template>
+
+  <script src="js/genimages.js"></script>
+  <script src="js/pool.js"></script>
+  <script src="js/strategies.js"></script>
+  <script src="js/monitor.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
