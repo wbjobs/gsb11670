@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>大图批量解码性能对比 · createImageBitmap / Image / img.decode</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="app-header">
+  <h1>大图批量解码性能对比</h1>
+  <p class="subtitle">createImageBitmap（Web Worker） · Image onload · img.decode() —— 原生 JS，无框架</p>
+</header>
+
+<!-- 控制区 -->
+<section class="panel controls">
+  <div class="control-group">
+    <label>图片数量
+      <input id="opt-count" type="number" min="1" max="60" value="6" />
+    </label>
+    <label>尺寸
+      <select id="opt-size">
+        <option value="2560x1440">2560 × 1440</option>
+        <option value="3840x2160" selected>3840 × 2160（4K）</option>
+        <option value="5120x2880">5120 × 2880（5K）</option>
+        <option value="7680x4320">7680 × 4320（8K，谨慎）</option>
+      </select>
+    </label>
+    <label>格式
+      <select id="opt-format">
+        <option value="image/jpeg" selected>JPEG</option>
+        <option value="image/png">PNG</option>
+        <option value="image/webp">WebP</option>
+        <option value="mixed">混合（三种轮替）</option>
+      </select>
+    </label>
+    <label>并发数
+      <input id="opt-concurrency" type="number" min="1" max="8" value="3" />
+    </label>
+    <label class="checkbox">
+      <input id="opt-corrupt" type="checkbox" checked /> 注入 1 张损坏图片（验证降级）
+    </label>
+  </div>
+  <div class="control-group buttons">
+    <button id="btn-gen" class="btn primary">① 生成大图</button>
+    <button id="btn-run-all" class="btn primary" disabled>② 运行三方案对比</button>
+    <button id="btn-cancel" class="btn danger" disabled>取消解码</button>
+    <button id="btn-clear" class="btn">清空结果</button>
+    <button id="btn-reset" class="btn">重置全部</button>
+  </div>
+  <div id="gen-progress" class="gen-progress hidden">生成中… <span id="gen-progress-text"></span></div>
+</section>
+
+<!-- 实时监控 -->
+<section class="panel monitor">
+  <div class="metric"><span class="metric-label">FPS</span><span id="m-fps" class="metric-value">—</span></div>
+  <div class="metric"><span class="metric-label">JS 堆内存</span><span id="m-heap" class="metric-value">—</span></div>
+  <div class="metric"><span class="metric-label">驻留解码内存（估算）</span><span id="m-decoded" class="metric-value">0 MB</span></div>
+  <div class="metric"><span class="metric-label">长任务（&gt;50ms）</span><span id="m-longtasks" class="metric-value">0</span></div>
+  <canvas id="m-spark" width="520" height="56" title="JS 堆内存走势"></canvas>
+</section>
+
+<!-- 方案卡片 -->
+<section id="schemes" class="schemes">
+  <div class="scheme-card" data-scheme="bitmap">
+    <h3>createImageBitmap <span class="tag">Web Worker</span></h3>
+    <p class="desc">Blob 传入 Worker 解码，ImageBitmap 以 transferable 零拷贝转回主线程，解码不阻塞 UI。</p>
+    <button class="btn small" data-run="bitmap" disabled>仅运行此方案</button>
+    <dl class="stats"></dl>
+    <div class="bar"><div class="bar-fill"></div><span class="bar-label"></span></div>
+  </div>
+  <div class="scheme-card" data-scheme="decode">
+    <h3>img.decode() <span class="tag">主线程 Promise</span></h3>
+    <p class="desc">设置 src 后等待 decode() Promise，可准确等待解码完成，但解码发生在线程内。</p>
+    <button class="btn small" data-run="decode" disabled>仅运行此方案</button>
+    <dl class="stats"></dl>
+    <div class="bar"><div class="bar-fill"></div><span class="bar-label"></span></div>
+  </div>
+  <div class="scheme-card" data-scheme="image">
+    <h3>Image onload <span class="tag">传统回调</span></h3>
+    <p class="desc">经典 onload 事件，无法区分“下载完成”与“解码完成”，绘制时才真正解码。</p>
+    <button class="btn small" data-run="image" disabled>仅运行此方案</button>
+    <dl class="stats"></dl>
+    <div class="bar"><div class="bar-fill"></div><span class="bar-label"></span></div>
+  </div>
+</section>
+
+<!-- 图片网格 -->
+<section class="panel">
+  <h2>解码队列 <span id="grid-summary" class="grid-summary"></span></h2>
+  <div id="grid" class="grid"></div>
+</section>
+
+<!-- 日志 -->
+<section class="panel">
+  <h2>日志</h2>
+  <div id="log" class="log"></div>
+</section>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
